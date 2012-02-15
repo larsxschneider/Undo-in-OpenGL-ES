@@ -55,7 +55,9 @@
 //CLASS IMPLEMENTATIONS:
 
 // A class extension to declare private methods
-@interface PaintingView (private)
+@interface PaintingView ()
+
+@property (nonatomic, retain) NSMutableArray *vertexBuffers;
 
 - (BOOL)createFramebuffer;
 - (void)destroyFramebuffer;
@@ -66,6 +68,7 @@
 
 @synthesize  location;
 @synthesize  previousLocation;
+@synthesize  vertexBuffers;
 
 // Implement this to override the default layer class (which is [CALayer class]).
 // We do this so that our view will be backed by a layer that is capable of OpenGL ES rendering.
@@ -257,6 +260,20 @@
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClear(GL_COLOR_BUFFER_BIT);
 	
+    // Remove last 50 vbos
+    for (int i = 0; i < 50; ++i)
+    {
+        [self.vertexBuffers removeLastObject];
+    }
+    
+    // Render remaining vbos
+    for (NSData *vbo in self.vertexBuffers)
+    {
+        NSUInteger count = vbo.length / (sizeof(GL_FLOAT) * 2);
+        glVertexPointer(2, GL_FLOAT, 0, vbo.bytes);
+        glDrawArrays(GL_POINTS, 0, count);
+    }
+ 
 	// Display the buffer
 	glBindRenderbufferOES(GL_RENDERBUFFER_OES, viewRenderbuffer);
 	[context presentRenderbuffer:GL_RENDERBUFFER_OES];
@@ -301,7 +318,13 @@
 	// Render the vertex array
 	glVertexPointer(2, GL_FLOAT, 0, vertexBuffer);
 	glDrawArrays(GL_POINTS, 0, vertexCount);
-	
+    
+    
+    // Store VBO for undo
+    NSData *data = [NSData dataWithBytes:vertexBuffer length:vertexCount * sizeof(GL_FLOAT) * 2] ;
+    if (self.vertexBuffers == nil) self.vertexBuffers = [[NSMutableArray alloc] init];
+    [self.vertexBuffers addObject:data];
+    
 	// Display the buffer
 	glBindRenderbufferOES(GL_RENDERBUFFER_OES, viewRenderbuffer);
 	[context presentRenderbuffer:GL_RENDERBUFFER_OES];
